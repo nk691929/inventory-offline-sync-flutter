@@ -1,4 +1,4 @@
-import 'package:collaberative_inventory/features/inventory/domain/entities/stock_mutation.dart';
+import 'package:collaborative_inventory/features/inventory/domain/entities/stock_mutation.dart';
 
 enum OperationStatus { pending, syncing, synced, failed }
 
