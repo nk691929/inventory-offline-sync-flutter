@@ -1,6 +1,17 @@
+import 'package:collaborative_inventory/features/inventory/data/models/product_model.dart';
+import 'package:collaborative_inventory/features/inventory/data/models/stock_mutation_model.dart';
+import 'package:collaborative_inventory/features/inventory/data/models/sync_operation_model.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+
+  Hive.registerAdapter(ProductModelAdapter());
+  Hive.registerAdapter(StockMutationModelAdapter());
+  Hive.registerAdapter(SyncOperationModelAdapter());
+
   runApp(const MyApp());
 }
 
