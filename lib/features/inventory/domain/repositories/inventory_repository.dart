@@ -19,10 +19,5 @@ abstract class InventoryRepository {
 
   //Queue Operations
   Future<void> enqueueOperation(SyncOperation operation);
-  Future<List<SyncOperation>> getPendingOperations();
-  Future<void> markOperationSynced(String operationId);
-  Future<void> markOperationFailed(
-    String operationId, {
-    required bool isFinal,
-  });
+  Future<void> syncPendingOperations();
 }

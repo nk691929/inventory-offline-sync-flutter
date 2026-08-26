@@ -26,3 +26,20 @@ class StockMutationOperation extends SyncOperation {
     required this.mutation,
   });
 }
+
+
+SyncOperation withUpdatedStatus(
+  SyncOperation operation, {
+  required OperationStatus status,
+  int? retryCount,
+}) {
+  return switch (operation) {
+    StockMutationOperation() => StockMutationOperation(
+        id: operation.id,
+        createdAt: operation.createdAt,
+        status: status,
+        retryCount: retryCount ?? operation.retryCount,
+        mutation: operation.mutation,
+      ),
+  };
+}
