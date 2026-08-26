@@ -1,4 +1,5 @@
 import 'package:collaborative_inventory/features/inventory/data/datasources/local/inventory_local_datasource.dart';
+import 'package:collaborative_inventory/features/inventory/data/datasources/remote/mock_backend_service.dart';
 import 'package:collaborative_inventory/features/inventory/data/models/product_model.dart';
 import 'package:collaborative_inventory/features/inventory/data/models/stock_mutation_model.dart';
 import 'package:collaborative_inventory/features/inventory/data/models/sync_operation_model.dart';
@@ -10,9 +11,14 @@ import 'package:uuid/uuid.dart';
 
 class InventoryRepositoryImpl implements InventoryRepository {
   final InventoryLocalDataSource localDataSource;
+  final MockBackendService mockBackendService;
   final _uuid = const Uuid();
+  static const int maxRetries = 3;
 
-  InventoryRepositoryImpl({required this.localDataSource});
+  InventoryRepositoryImpl({
+    required this.localDataSource,
+    required this.mockBackendService,
+  });
 
   @override
   Stream<List<Product>> watchProducts() {
@@ -86,23 +92,44 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   @override
-  Future<List<SyncOperation>> getPendingOperations() async {
-    // TODO: implement getPendingOperations
-    throw UnimplementedError();
-  }
+  Future<void> syncPendingOperations() async {
+    final pendingModels = await localDataSource.getPendingOperations();
+    for (final model in pendingModels) {
+      final operation = model.toEntity();
 
-  @override
-  Future<void> markOperationFailed(
-    String operationId, {
-    required bool isFinal,
-  }) async {
-    // TODO: implement markOperationFailed
-    throw UnimplementedError();
-  }
+      if (operation is! StockMutationOperation) continue;
 
-  @override
-  Future<void> markOperationSynced(String operationId) async {
-    // TODO: implement markOperationSynced
-    throw UnimplementedError();
+      try {
+        await mockBackendService.sendMutation(operation.mutation);
+        final synced = withUpdatedStatus(
+          operation,
+          status: OperationStatus.synced,
+        );
+        await localDataSource.updateSyncOperation(
+          SyncOperationModel.fromEntity(synced),
+        );
+      } on ConflictException {
+        final lost = withUpdatedStatus(
+          operation,
+          status: OperationStatus.failed,
+        );
+        await localDataSource.updateSyncOperation(
+          SyncOperationModel.fromEntity(lost),
+        );
+      } catch (e) {
+        final nextRetryCount = operation.retryCount + 1;
+        final isFinal = nextRetryCount >= maxRetries;
+
+        final updated = withUpdatedStatus(
+          operation,
+          status: isFinal ? OperationStatus.failed : OperationStatus.pending,
+          retryCount: nextRetryCount,
+        );
+
+        await localDataSource.updateSyncOperation(
+          SyncOperationModel.fromEntity(updated),
+        );
+      }
+    }
   }
 }
