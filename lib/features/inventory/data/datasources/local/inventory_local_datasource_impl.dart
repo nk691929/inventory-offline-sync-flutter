@@ -8,9 +8,9 @@ import 'package:collaborative_inventory/features/inventory/data/models/sync_oper
 import 'inventory_local_datasource.dart';
 
 class HiveBoxNames {
-  static const products = 'products_box';
-  static const mutations = 'mutations_box';
-  static const syncQueue = 'sync_queue_box';
+  static const productBox = 'products_box';
+  static const mutationBox = 'mutations_box';
+  static const syncQueueBox = 'sync_queue_box';
 }
 
 class InventoryLocalDataSourceImpl implements InventoryLocalDataSource {
@@ -69,5 +69,10 @@ class InventoryLocalDataSourceImpl implements InventoryLocalDataSource {
   @override
   Future<void> updateSyncOperation(SyncOperationModel operation) async {
     await syncQueueBox.put(operation.id, operation);
+  }
+
+  @override
+  Future<List<StockMutationModel>> getMutationHistory(String productId) async {
+    return mutationBox.values.where((m) => m.productId == productId).toList();
   }
 }

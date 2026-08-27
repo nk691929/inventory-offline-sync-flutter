@@ -23,13 +23,14 @@ class StockMutationModelAdapter extends TypeAdapter<StockMutationModel> {
       type: fields[3] as String,
       timestamp: fields[4] as DateTime,
       changedBy: fields[5] as String,
+      previousQuantity: fields[6] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, StockMutationModel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class StockMutationModelAdapter extends TypeAdapter<StockMutationModel> {
       ..writeByte(4)
       ..write(obj.timestamp)
       ..writeByte(5)
-      ..write(obj.changedBy);
+      ..write(obj.changedBy)
+      ..writeByte(6)
+      ..write(obj.previousQuantity);
   }
 
   @override

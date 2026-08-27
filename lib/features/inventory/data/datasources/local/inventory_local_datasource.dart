@@ -14,4 +14,5 @@ abstract class InventoryLocalDataSource {
   Future<void> saveSyncOperation(SyncOperationModel operation);
   Future<List<SyncOperationModel>> getPendingOperations();
   Future<void> updateSyncOperation(SyncOperationModel operation);
+  Future<List<StockMutationModel>> getMutationHistory(String productId);
 }

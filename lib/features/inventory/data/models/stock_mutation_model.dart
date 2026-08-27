@@ -17,6 +17,8 @@ class StockMutationModel extends HiveObject {
   final DateTime timestamp;
   @HiveField(5)
   final String changedBy;
+  @HiveField(6) 
+  final int previousQuantity;
 
   StockMutationModel({
     required this.id,
@@ -25,12 +27,14 @@ class StockMutationModel extends HiveObject {
     required this.type,
     required this.timestamp,
     required this.changedBy,
+    required this.previousQuantity,
   });
 
   StockMutation toEntity() {
     return StockMutation(
       id: id,
       productId: productId,
+      previousQuantity: previousQuantity,
       resultingQuantity: resultingQuantity,
       type: MutationType.values.byName(type),
       timestamp: timestamp,
@@ -38,14 +42,15 @@ class StockMutationModel extends HiveObject {
     );
   }
 
-  factory StockMutationModel.fromEntity(StockMutation stockMutation) {
+  factory StockMutationModel.fromEntity(StockMutation m) {
     return StockMutationModel(
-      id: stockMutation.id,
-      productId: stockMutation.productId,
-      resultingQuantity: stockMutation.resultingQuantity,
-      type: stockMutation.type.name,
-      timestamp: stockMutation.timestamp,
-      changedBy: stockMutation.changedBy,
+      id: m.id,
+      productId: m.productId,
+      resultingQuantity: m.resultingQuantity,
+      type: m.type.name,
+      timestamp: m.timestamp,
+      changedBy: m.changedBy,
+      previousQuantity: m.previousQuantity,
     );
   }
 }

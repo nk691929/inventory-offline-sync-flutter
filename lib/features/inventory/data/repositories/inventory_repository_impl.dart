@@ -49,9 +49,13 @@ class InventoryRepositoryImpl implements InventoryRepository {
     required int newQuantity,
     required String changedBy,
   }) async {
+    final currentModel = await localDataSource.getProductById(productId);
+    final previousQuantity = currentModel?.quantity ?? 0;
+
     final mutation = StockMutation(
       id: _uuid.v4(),
       productId: productId,
+      previousQuantity: previousQuantity,
       resultingQuantity: newQuantity,
       type: MutationType.adjustment,
       timestamp: DateTime.now(),
@@ -116,6 +120,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
         await localDataSource.updateSyncOperation(
           SyncOperationModel.fromEntity(lost),
         );
+        await _rollbackProductQuantity(operation.mutation);
       } catch (e) {
         final nextRetryCount = operation.retryCount + 1;
         final isFinal = nextRetryCount >= maxRetries;
@@ -129,7 +134,26 @@ class InventoryRepositoryImpl implements InventoryRepository {
         await localDataSource.updateSyncOperation(
           SyncOperationModel.fromEntity(updated),
         );
+
+        if (isFinal) {
+          await _rollbackProductQuantity(operation.mutation);
+        }
       }
     }
+  }
+
+  Future<void> _rollbackProductQuantity(StockMutation failedMutation) async {
+    final currentModel = await localDataSource.getProductById(
+      failedMutation.productId,
+    );
+    if (currentModel == null) return;
+
+    final rolledBack = ProductModel(
+      id: currentModel.id,
+      name: currentModel.name,
+      quantity: failedMutation.previousQuantity, 
+      lastModified: DateTime.now(),
+    );
+    await localDataSource.saveProduct(rolledBack);
   }
 }
