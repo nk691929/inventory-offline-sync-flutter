@@ -50,15 +50,20 @@ class InventoryRepositoryImpl implements InventoryRepository {
     required String changedBy,
   }) async {
     final currentModel = await localDataSource.getProductById(productId);
-    final previousQuantity = currentModel?.quantity ?? 0;
+
+    if (currentModel == null) {
+      throw StateError('Product not found: $productId');
+    }
+
+    final now = DateTime.now();
 
     final mutation = StockMutation(
       id: _uuid.v4(),
       productId: productId,
-      previousQuantity: previousQuantity,
+      previousQuantity: currentModel.quantity,
       resultingQuantity: newQuantity,
       type: MutationType.adjustment,
-      timestamp: DateTime.now(),
+      timestamp: now,
       changedBy: changedBy,
     );
 
@@ -66,17 +71,23 @@ class InventoryRepositoryImpl implements InventoryRepository {
       StockMutationModel.fromEntity(mutation),
     );
 
-    final model = await localDataSource.getProductById(productId);
-    if (model != null) {
-      final updated = ProductModel(
-        id: model.id,
-        name: model.name,
-        quantity: newQuantity,
-        lastModified: DateTime.now(),
-      );
+    final updated = ProductModel(
+      id: currentModel.id,
+      name: currentModel.name,
+      quantity: newQuantity,
+      lastModified: now,
+    );
 
-      await localDataSource.saveProduct(updated);
-    }
+    await localDataSource.saveProduct(updated);
+
+    final stockOperation = StockMutationOperation(
+      id: _uuid.v4(),
+      createdAt: now,
+      status: OperationStatus.pending,
+      mutation: mutation,
+    );
+
+    await enqueueOperation(stockOperation);
 
     return mutation;
   }
@@ -148,10 +159,14 @@ class InventoryRepositoryImpl implements InventoryRepository {
     );
     if (currentModel == null) return;
 
+    if (currentModel.lastModified != failedMutation.timestamp) {
+      return;
+    }
+
     final rolledBack = ProductModel(
       id: currentModel.id,
       name: currentModel.name,
-      quantity: failedMutation.previousQuantity, 
+      quantity: failedMutation.previousQuantity,
       lastModified: DateTime.now(),
     );
     await localDataSource.saveProduct(rolledBack);
