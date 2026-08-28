@@ -1,4 +1,6 @@
 import 'package:collaborative_inventory/core/providers/core_providers.dart';
+import 'package:collaborative_inventory/features/auth/domain/entities/app_user.dart';
+import 'package:collaborative_inventory/features/auth/domain/entities/user_role.dart';
 import 'package:collaborative_inventory/features/inventory/data/datasources/local/inventory_local_datasource.dart';
 import 'package:collaborative_inventory/features/inventory/data/datasources/local/inventory_local_datasource_impl.dart';
 import 'package:collaborative_inventory/features/inventory/data/datasources/remote/mock_backend_service.dart';
@@ -55,4 +57,14 @@ final syncQueueManagerProvider = Provider<SyncQueueManager>((ref) {
 
 final productsStreamProvider = StreamProvider<List<Product>>(
   (ref) => ref.watch(inventoryRepositoryProvider).watchProducts(),
+);
+
+final pendingProductIdsProvider = StreamProvider<Set<String>>(
+  (ref) => ref.watch(inventoryRepositoryProvider).watchPendingProductIds(),
+);
+
+// for checking remove later
+final currentUserProvider = Provider<AppUser>(
+  (ref) =>
+      AppUser(id: 'u1', email: "viewer@example.com", role: UserRole.viewer),
 );

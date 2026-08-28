@@ -25,8 +25,9 @@ class InventoryLocalDataSourceImpl implements InventoryLocalDataSource {
   });
 
   @override
-  Stream<List<ProductModel>> watchProducts() {
-    return productBox.watch().map((_) => productBox.values.toList());
+  Stream<List<ProductModel>> watchProducts() async* {
+    yield productBox.values.toList();
+    yield* productBox.watch().map((_) => productBox.values.toList());
   }
 
   @override
@@ -45,13 +46,24 @@ class InventoryLocalDataSourceImpl implements InventoryLocalDataSource {
   }
 
   @override
+  Stream<List<SyncOperationModel>> watchPendingSyncOperations() async* {
+    yield syncQueueBox.values.where((op) => op.status == 'pending').toList();
+    yield* syncQueueBox.watch().map(
+      (_) => syncQueueBox.values.where((op) => op.status == 'pending').toList(),
+    );
+  }
+
+  @override
   Future<void> saveStockMutation(StockMutationModel mutation) async {
     await mutationBox.put(mutation.id, mutation);
   }
 
   @override
-  Stream<List<StockMutationModel>> watchMutationHistory(String productId) {
-    return mutationBox.watch().map(
+  Stream<List<StockMutationModel>> watchMutationHistory(
+    String productId,
+  ) async* {
+    yield mutationBox.values.where((m) => m.productId == productId).toList();
+    yield* mutationBox.watch().map(
       (_) => mutationBox.values.where((m) => m.productId == productId).toList(),
     );
   }

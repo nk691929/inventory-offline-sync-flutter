@@ -24,6 +24,13 @@ class SyncQueueManager {
     });
   }
 
+  Future<void> triggerImmediateSyncIfOnline() async {
+    final isOnline = await connectivityService.isConnected;
+    if (isOnline) {
+      await repository.syncPendingOperations();
+    }
+  }
+
   void dispose() {
     _subscription?.cancel();
   }

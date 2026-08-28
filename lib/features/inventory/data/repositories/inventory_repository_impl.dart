@@ -44,6 +44,17 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   @override
+  Stream<Set<String>> watchPendingProductIds() {
+    return localDataSource.watchPendingSyncOperations().map((models) {
+      return models
+          .map((m) => m.toEntity())
+          .whereType<StockMutationOperation>()
+          .map((op) => op.mutation.productId)
+          .toSet();
+    });
+  }
+
+  @override
   Future<StockMutation> updateStock({
     required String productId,
     required int newQuantity,
