@@ -7,8 +7,8 @@ abstract class InventoryRepository {
   Future<Product?> getProductById(String productId);
   Future<void> addProduct(Product product);
   Future<void> deleteProduct(String productId);
+Stream<Set<String>> watchPendingProductIds();
 
-  //StockMutation
   Future<StockMutation> updateStock({
     required String productId,
     required int newQuantity,
@@ -17,7 +17,6 @@ abstract class InventoryRepository {
 
   Stream<List<StockMutation>> watchMutationHistory(String productId);
 
-  //Queue Operations
   Future<void> enqueueOperation(SyncOperation operation);
   Future<void> syncPendingOperations();
 }
