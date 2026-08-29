@@ -9,6 +9,7 @@ import 'package:collaborative_inventory/features/inventory/data/models/stock_mut
 import 'package:collaborative_inventory/features/inventory/data/models/sync_operation_model.dart';
 import 'package:collaborative_inventory/features/inventory/data/repositories/inventory_repository_impl.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/product.dart';
+import 'package:collaborative_inventory/features/inventory/domain/entities/stock_mutation.dart';
 import 'package:collaborative_inventory/features/inventory/domain/repositories/inventory_repository.dart';
 import 'package:collaborative_inventory/features/inventory/domain/services/sync_queue_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,8 +64,15 @@ final pendingProductIdsProvider = StreamProvider<Set<String>>(
   (ref) => ref.watch(inventoryRepositoryProvider).watchPendingProductIds(),
 );
 
+final mutationHistoryProvider =
+    StreamProvider.family<List<StockMutation>, String>(
+      (ref, productId) => ref
+          .watch(inventoryRepositoryProvider)
+          .watchMutationHistory(productId),
+    );
+
 // for checking remove later
 final currentUserProvider = Provider<AppUser>(
   (ref) =>
-      AppUser(id: 'u1', email: "viewer@example.com", role: UserRole.viewer),
+      AppUser(id: 'u1', email: "manager@example.com", role: UserRole.manager),
 );

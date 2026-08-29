@@ -1,4 +1,3 @@
-// test/features/inventory/data/repositories/inventory_repository_impl_test.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:collaborative_inventory/features/inventory/data/models/product_model.dart';
 import 'package:collaborative_inventory/features/inventory/data/models/stock_mutation_model.dart';
@@ -8,9 +7,7 @@ import 'package:collaborative_inventory/features/inventory/data/datasources/remo
 import 'package:collaborative_inventory/features/inventory/data/repositories/inventory_repository_impl.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/stock_mutation.dart';
 
-// Fake datasource — in-memory, no real Hive needed. This is the actual
-// payoff of NFR3 ("testable independent of UI") and of having an
-// abstract InventoryLocalDataSource in the first place.
+// Fake datasource in-memory
 class FakeLocalDataSource implements InventoryLocalDataSource {
   final Map<String, ProductModel> products = {};
   final Map<String, StockMutationModel> mutations = {};

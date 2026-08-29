@@ -1,5 +1,6 @@
 import 'package:collaborative_inventory/features/inventory/domain/entities/product.dart';
 import 'package:collaborative_inventory/features/inventory/presentations/providers/inventory_providers.dart';
+import 'package:collaborative_inventory/features/inventory/presentations/screens/audit_log_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collaborative_inventory/features/auth/domain/entities/user_role.dart';
@@ -43,14 +44,33 @@ class ProductListScreen extends ConsumerWidget {
                     if (canEdit) ...[
                       IconButton(
                         icon: const Icon(Icons.remove_circle_outline),
-                        onPressed: () => _updateStock(ref, product.id, product.quantity - 1, currentUser.email),
+                        onPressed: () => _updateStock(
+                          ref,
+                          product.id,
+                          product.quantity - 1,
+                          currentUser.email,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.add_circle_outline),
-                        onPressed: () => _updateStock(ref, product.id, product.quantity + 1, currentUser.email),
-                      ),
+                        onPressed: () => _updateStock(
+                          ref,
+                          product.id,
+                          product.quantity + 1,
+                          currentUser.email,
+                        ),
+                      ),                      
                     ],
                   ],
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AuditLogScreen(
+                      productId: product.id,
+                      productName: product.name,
+                    ),
+                  ),
                 ),
               );
             },
@@ -58,33 +78,42 @@ class ProductListScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: canEdit
-    ? FloatingActionButton(
-        onPressed: () {
-          ref.read(inventoryRepositoryProvider).addProduct(
-                Product(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  name: 'Test Product',
-                  quantity: 10,
-                  lastModified: DateTime.now(),
-                ),
-              );
-        },
-        child: const Icon(Icons.add),
-      )
-    : null,
+          ? FloatingActionButton(
+              onPressed: () {
+                ref
+                    .read(inventoryRepositoryProvider)
+                    .addProduct(
+                      Product(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        name: 'Test Product',
+                        quantity: 10,
+                        lastModified: DateTime.now(),
+                      ),
+                    );
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 
- Future<void> _updateStock(WidgetRef ref, String productId, int newQuantity, String changedBy) async {
-  try {
-    await ref.read(inventoryRepositoryProvider).updateStock(
-          productId: productId,
-          newQuantity: newQuantity,
-          changedBy: changedBy,
-        );
-    await ref.read(syncQueueManagerProvider).triggerImmediateSyncIfOnline();
-  } catch (e) {
-    // will handle 
+  Future<void> _updateStock(
+    WidgetRef ref,
+    String productId,
+    int newQuantity,
+    String changedBy,
+  ) async {
+    try {
+      await ref
+          .read(inventoryRepositoryProvider)
+          .updateStock(
+            productId: productId,
+            newQuantity: newQuantity,
+            changedBy: changedBy,
+          );
+      await ref.read(syncQueueManagerProvider).triggerImmediateSyncIfOnline();
+    } catch (e) {
+      // will handle
+    }
   }
-}
 }
