@@ -1,6 +1,4 @@
 import 'package:collaborative_inventory/core/providers/core_providers.dart';
-import 'package:collaborative_inventory/features/auth/domain/entities/app_user.dart';
-import 'package:collaborative_inventory/features/auth/domain/entities/user_role.dart';
 import 'package:collaborative_inventory/features/inventory/data/datasources/local/inventory_local_datasource.dart';
 import 'package:collaborative_inventory/features/inventory/data/datasources/local/inventory_local_datasource_impl.dart';
 import 'package:collaborative_inventory/features/inventory/data/datasources/remote/mock_backend_service.dart';
@@ -70,9 +68,3 @@ final mutationHistoryProvider =
           .watch(inventoryRepositoryProvider)
           .watchMutationHistory(productId),
     );
-
-// for checking remove later
-final currentUserProvider = Provider<AppUser>(
-  (ref) =>
-      AppUser(id: 'u1', email: "manager@example.com", role: UserRole.manager),
-);

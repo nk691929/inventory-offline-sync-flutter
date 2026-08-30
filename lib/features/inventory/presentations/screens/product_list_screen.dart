@@ -1,3 +1,5 @@
+import 'package:collaborative_inventory/features/auth/presentations/providers/auth_provider.dart';
+import 'package:collaborative_inventory/features/auth/presentations/screens/login_screen.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/product.dart';
 import 'package:collaborative_inventory/features/inventory/presentations/providers/inventory_providers.dart';
 import 'package:collaborative_inventory/features/inventory/presentations/screens/audit_log_screen.dart';
@@ -12,11 +14,28 @@ class ProductListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final productsAsync = ref.watch(productsStreamProvider);
     final pendingIds = ref.watch(pendingProductIdsProvider).value ?? {};
-    final currentUser = ref.watch(currentUserProvider);
+    final authState = ref.watch(authNotifierProvider);
+    final currentUser = authState.value;
+
+    if (currentUser == null) {
+      return const Scaffold(body: Center(child: Text('Not logged in.')));
+    }
+
     final canEdit = currentUser.role.can(Permission.editStock);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Inventory')),
+      appBar: AppBar(
+        title: const Text('Inventory'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              ref.read(authNotifierProvider.notifier).logout();
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_)=>const LoginScreen()));
+            },
+            icon: Icon(Icons.logout),
+          ),
+        ],
+      ),
       body: productsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
@@ -59,7 +78,7 @@ class ProductListScreen extends ConsumerWidget {
                           product.quantity + 1,
                           currentUser.email,
                         ),
-                      ),                      
+                      ),
                     ],
                   ],
                 ),
