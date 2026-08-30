@@ -10,6 +10,7 @@ import 'package:collaborative_inventory/features/inventory/domain/entities/produ
 import 'package:collaborative_inventory/features/inventory/domain/entities/stock_mutation.dart';
 import 'package:collaborative_inventory/features/inventory/domain/repositories/inventory_repository.dart';
 import 'package:collaborative_inventory/features/inventory/domain/services/sync_queue_manager.dart';
+import 'package:collaborative_inventory/features/inventory/domain/usecases/update_stock_usecase.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
@@ -68,3 +69,7 @@ final mutationHistoryProvider =
           .watch(inventoryRepositoryProvider)
           .watchMutationHistory(productId),
     );
+
+final updateStockUseCaseProvider = Provider<UpdateStockUseCase>(
+  (ref) => UpdateStockUseCase(repository: ref.read(inventoryRepositoryProvider)),
+);

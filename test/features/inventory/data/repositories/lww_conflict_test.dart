@@ -1,15 +1,15 @@
-import 'package:collaborative_inventory/features/inventory/data/datasources/remote/mock_backend_service.dart';
 import 'package:collaborative_inventory/features/inventory/data/models/product_model.dart';
 import 'package:collaborative_inventory/features/inventory/data/repositories/inventory_repository_impl.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/stock_mutation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'inventory_repository_impl_test.dart' show FakeLocalDataSource;
+import '../datasource/local/fake_local_datasource.dart';
+import '../datasource/remote/conflict_only_background.dart';
 
 void main() {
   test('older mutation is rejected and rolled back when a newer write already synced', () async {
     final dataSource = FakeLocalDataSource();
-    final backend = MockBackendServiceImpl();
+    final backend = ConflictOnlyBackend();
     final repository = InventoryRepositoryImpl(
       localDataSource: dataSource,
       mockBackendService: backend,
