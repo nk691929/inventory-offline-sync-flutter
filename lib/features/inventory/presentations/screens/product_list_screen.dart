@@ -1,6 +1,7 @@
 import 'package:collaborative_inventory/features/auth/presentations/providers/auth_provider.dart';
 import 'package:collaborative_inventory/features/auth/presentations/screens/login_screen.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/product.dart';
+import 'package:collaborative_inventory/features/inventory/domain/usecases/update_stock_usecase.dart';
 import 'package:collaborative_inventory/features/inventory/presentations/providers/inventory_providers.dart';
 import 'package:collaborative_inventory/features/inventory/presentations/screens/audit_log_screen.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +31,10 @@ class ProductListScreen extends ConsumerWidget {
           IconButton(
             onPressed: () {
               ref.read(authNotifierProvider.notifier).logout();
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_)=>const LoginScreen()));
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
             },
             icon: Icon(Icons.logout),
           ),
@@ -68,6 +72,7 @@ class ProductListScreen extends ConsumerWidget {
                           product.id,
                           product.quantity - 1,
                           currentUser.email,
+                          currentUser.role,
                         ),
                       ),
                       IconButton(
@@ -77,6 +82,7 @@ class ProductListScreen extends ConsumerWidget {
                           product.id,
                           product.quantity + 1,
                           currentUser.email,
+                          currentUser.role,
                         ),
                       ),
                     ],
@@ -121,18 +127,21 @@ class ProductListScreen extends ConsumerWidget {
     String productId,
     int newQuantity,
     String changedBy,
+    UserRole role,
   ) async {
     try {
       await ref
-          .read(inventoryRepositoryProvider)
-          .updateStock(
+          .read(updateStockUseCaseProvider)
+          .call(
+            role: role,
             productId: productId,
             newQuantity: newQuantity,
             changedBy: changedBy,
           );
+
       await ref.read(syncQueueManagerProvider).triggerImmediateSyncIfOnline();
-    } catch (e) {
-      // will handle
-    }
+    } on PermissionDeniedException catch (e) {
+      debugPrint('BLOCKED: ${e.message}');
+    } 
   }
 }
