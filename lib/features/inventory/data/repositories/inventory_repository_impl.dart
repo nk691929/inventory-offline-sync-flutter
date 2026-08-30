@@ -14,6 +14,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
   final MockBackendService mockBackendService;
   final _uuid = const Uuid();
   static const int maxRetries = 3;
+  bool _isSyncing = false;
 
   InventoryRepositoryImpl({
     required this.localDataSource,
@@ -119,48 +120,54 @@ class InventoryRepositoryImpl implements InventoryRepository {
 
   @override
   Future<void> syncPendingOperations() async {
-    final pendingModels = await localDataSource.getPendingOperations();
-    for (final model in pendingModels) {
-      final operation = model.toEntity();
+    if (_isSyncing) {
+      return;
+    }
+    _isSyncing = true;
 
-      if (operation is! StockMutationOperation) continue;
+    try {
+      final pendingModels = await localDataSource.getPendingOperations();
 
-      try {
-        await mockBackendService.sendMutation(operation.mutation);
-        final synced = withUpdatedStatus(
-          operation,
-          status: OperationStatus.synced,
-        );
-        await localDataSource.updateSyncOperation(
-          SyncOperationModel.fromEntity(synced),
-        );
-      } on ConflictException {
-        final lost = withUpdatedStatus(
-          operation,
-          status: OperationStatus.failed,
-        );
-        await localDataSource.updateSyncOperation(
-          SyncOperationModel.fromEntity(lost),
-        );
-        await _rollbackProductQuantity(operation.mutation);
-      } catch (e) {
-        final nextRetryCount = operation.retryCount + 1;
-        final isFinal = nextRetryCount >= maxRetries;
+      for (final model in pendingModels) {
+        final operation = model.toEntity();
+        if (operation is! StockMutationOperation) continue;
 
-        final updated = withUpdatedStatus(
-          operation,
-          status: isFinal ? OperationStatus.failed : OperationStatus.pending,
-          retryCount: nextRetryCount,
-        );
-
-        await localDataSource.updateSyncOperation(
-          SyncOperationModel.fromEntity(updated),
-        );
-
-        if (isFinal) {
+        try {
+          await mockBackendService.sendMutation(operation.mutation);
+          final synced = withUpdatedStatus(
+            operation,
+            status: OperationStatus.synced,
+          );
+          await localDataSource.updateSyncOperation(
+            SyncOperationModel.fromEntity(synced),
+          );
+        } on ConflictException {
+          final lost = withUpdatedStatus(
+            operation,
+            status: OperationStatus.failed,
+          );
+          await localDataSource.updateSyncOperation(
+            SyncOperationModel.fromEntity(lost),
+          );
           await _rollbackProductQuantity(operation.mutation);
+        } catch (e) {
+          final nextRetryCount = operation.retryCount + 1;
+          final isFinal = nextRetryCount >= maxRetries;
+          final updated = withUpdatedStatus(
+            operation,
+            status: isFinal ? OperationStatus.failed : OperationStatus.pending,
+            retryCount: nextRetryCount,
+          );
+          await localDataSource.updateSyncOperation(
+            SyncOperationModel.fromEntity(updated),
+          );
+          if (isFinal) {
+            await _rollbackProductQuantity(operation.mutation);
+          }
         }
       }
+    } finally {
+      _isSyncing = false; 
     }
   }
 
