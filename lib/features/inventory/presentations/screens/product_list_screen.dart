@@ -1,8 +1,8 @@
 import 'package:collaborative_inventory/features/auth/presentations/providers/auth_provider.dart';
 import 'package:collaborative_inventory/features/auth/presentations/screens/login_screen.dart';
-import 'package:collaborative_inventory/features/inventory/domain/entities/product.dart';
 import 'package:collaborative_inventory/features/inventory/domain/usecases/update_stock_usecase.dart';
 import 'package:collaborative_inventory/features/inventory/presentations/providers/inventory_providers.dart';
+import 'package:collaborative_inventory/features/inventory/presentations/screens/add_product_screen.dart';
 import 'package:collaborative_inventory/features/inventory/presentations/screens/audit_log_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,20 +23,23 @@ class ProductListScreen extends ConsumerWidget {
     }
 
     final canEdit = currentUser.role.can(Permission.editStock);
+    final canCreate = currentUser.role.can(Permission.createProduct);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inventory'),
         actions: [
           IconButton(
-            onPressed: () {
-              ref.read(authNotifierProvider.notifier).logout();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await ref.read(authNotifierProvider.notifier).logout();
+              if (context.mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              }
             },
-            icon: Icon(Icons.logout),
           ),
         ],
       ),
@@ -53,47 +56,71 @@ class ProductListScreen extends ConsumerWidget {
               final product = products[index];
               final isPending = pendingIds.contains(product.id);
 
-              return ListTile(
-                title: Text(product.name),
-                subtitle: Text('Qty: ${product.quantity}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isPending)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 8),
-                        child: Icon(Icons.sync, size: 18, color: Colors.orange),
-                      ),
-                    if (canEdit) ...[
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline),
-                        onPressed: () => _updateStock(
-                          ref,
-                          product.id,
-                          product.quantity - 1,
-                          currentUser.email,
-                          currentUser.role,
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer,
+                    child: Text(
+                      product.name.isNotEmpty
+                          ? product.name[0].toUpperCase()
+                          : '?',
+                    ),
+                  ),
+                  title: Text(
+                    product.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text('Qty: ${product.quantity}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isPending)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: Icon(
+                            Icons.sync,
+                            size: 18,
+                            color: Colors.orange,
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline),
-                        onPressed: () => _updateStock(
-                          ref,
-                          product.id,
-                          product.quantity + 1,
-                          currentUser.email,
-                          currentUser.role,
+                      if (canEdit) ...[
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          onPressed: () => _updateStock(
+                            ref,
+                            product.id,
+                            product.quantity - 1,
+                            currentUser.email,
+                            currentUser.role,
+                          ),
                         ),
-                      ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline),
+                          onPressed: () => _updateStock(
+                            ref,
+                            product.id,
+                            product.quantity + 1,
+                            currentUser.email,
+                            currentUser.role,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AuditLogScreen(
-                      productId: product.id,
-                      productName: product.name,
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AuditLogScreen(
+                        productId: product.id,
+                        productName: product.name,
+                      ),
                     ),
                   ),
                 ),
@@ -102,21 +129,14 @@ class ProductListScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: canEdit
-          ? FloatingActionButton(
-              onPressed: () {
-                ref
-                    .read(inventoryRepositoryProvider)
-                    .addProduct(
-                      Product(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        name: 'Test Product',
-                        quantity: 10,
-                        lastModified: DateTime.now(),
-                      ),
-                    );
-              },
-              child: const Icon(Icons.add),
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddProductScreen()),
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Product'),
             )
           : null,
     );
@@ -142,6 +162,6 @@ class ProductListScreen extends ConsumerWidget {
       await ref.read(syncQueueManagerProvider).triggerImmediateSyncIfOnline();
     } on PermissionDeniedException catch (e) {
       debugPrint('BLOCKED: ${e.message}');
-    } 
+    }
   }
 }
