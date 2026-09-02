@@ -24,7 +24,6 @@ void main() {
         mockBackendService: AlwaysFailingBackend(),
       );
 
-      // arange product starts at quantity 10
       await dataSource.saveProduct(
         ProductModel(
           id: 'p1',
@@ -34,7 +33,6 @@ void main() {
         ),
       );
 
-      // 1. optimistic update to 15
       await repository.updateStock(
         productId: 'p1',
         newQuantity: 15,
@@ -46,12 +44,10 @@ void main() {
         15,
       ); 
 
-      // 2. run sync 3 times  matches maxRetries, forcing isFinal on the 3rd attempt
       await repository.syncPendingOperations();
       await repository.syncPendingOperations();
       await repository.syncPendingOperations();
 
-      // assert rollback fired, quantity reverted to the pre-mutation value
       final afterRollback = await repository.getProductById('p1');
       expect(afterRollback!.quantity, 10);
     },

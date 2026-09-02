@@ -7,13 +7,15 @@ abstract class InventoryLocalDataSource {
   Future<void> saveProduct(ProductModel product);
   Future<void> deleteProduct(String productId);
   Future<ProductModel?> getProductById(String productId);
-  Stream<List<SyncOperationModel>> watchPendingSyncOperations();
 
   Future<void> saveStockMutation(StockMutationModel mutation);
   Stream<List<StockMutationModel>> watchMutationHistory(String productId);
+  Future<List<StockMutationModel>> getMutationHistory(String productId);
 
+  Stream<List<SyncOperationModel>> watchAllSyncOperations();
   Future<void> saveSyncOperation(SyncOperationModel operation);
   Future<List<SyncOperationModel>> getPendingOperations();
   Future<void> updateSyncOperation(SyncOperationModel operation);
-  Future<List<StockMutationModel>> getMutationHistory(String productId);
+  Stream<List<SyncOperationModel>> watchPendingSyncOperations();
+  Stream<List<SyncOperationModel>> watchFailedSyncOperations();
 }

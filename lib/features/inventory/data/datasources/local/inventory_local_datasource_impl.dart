@@ -24,6 +24,7 @@ class InventoryLocalDataSourceImpl implements InventoryLocalDataSource {
     required this.syncQueueBox,
   });
 
+  //Products Methods
   @override
   Stream<List<ProductModel>> watchProducts() async* {
     yield productBox.values.toList();
@@ -45,14 +46,7 @@ class InventoryLocalDataSourceImpl implements InventoryLocalDataSource {
     return productBox.get(productId);
   }
 
-  @override
-  Stream<List<SyncOperationModel>> watchPendingSyncOperations() async* {
-    yield syncQueueBox.values.where((op) => op.status == 'pending').toList();
-    yield* syncQueueBox.watch().map(
-      (_) => syncQueueBox.values.where((op) => op.status == 'pending').toList(),
-    );
-  }
-
+  //Stock Mutation Methods
   @override
   Future<void> saveStockMutation(StockMutationModel mutation) async {
     await mutationBox.put(mutation.id, mutation);
@@ -69,6 +63,12 @@ class InventoryLocalDataSourceImpl implements InventoryLocalDataSource {
   }
 
   @override
+  Future<List<StockMutationModel>> getMutationHistory(String productId) async {
+    return mutationBox.values.where((m) => m.productId == productId).toList();
+  }
+
+  //Sync Queue Methods
+  @override
   Future<void> saveSyncOperation(SyncOperationModel operation) async {
     await syncQueueBox.put(operation.id, operation);
   }
@@ -84,7 +84,24 @@ class InventoryLocalDataSourceImpl implements InventoryLocalDataSource {
   }
 
   @override
-  Future<List<StockMutationModel>> getMutationHistory(String productId) async {
-    return mutationBox.values.where((m) => m.productId == productId).toList();
+  Stream<List<SyncOperationModel>> watchPendingSyncOperations() async* {
+    yield syncQueueBox.values.where((op) => op.status == 'pending').toList();
+    yield* syncQueueBox.watch().map(
+      (_) => syncQueueBox.values.where((op) => op.status == 'pending').toList(),
+    );
+  }
+
+  @override
+  Stream<List<SyncOperationModel>> watchFailedSyncOperations() async* {
+    yield syncQueueBox.values.where((op) => op.status == 'failed').toList();
+    yield* syncQueueBox.watch().map(
+      (_) => syncQueueBox.values.where((op) => op.status == 'failed').toList(),
+    );
+  }
+
+  @override
+  Stream<List<SyncOperationModel>> watchAllSyncOperations() async* {
+    yield syncQueueBox.values.toList();
+    yield* syncQueueBox.watch().map((_) => syncQueueBox.values.toList());
   }
 }

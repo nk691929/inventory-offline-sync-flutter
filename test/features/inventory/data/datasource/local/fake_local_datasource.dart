@@ -56,4 +56,16 @@ class FakeLocalDataSource implements InventoryLocalDataSource {
       syncOps.values.where((op) => op.status == 'pending').toList(),
     );
   }
+
+  @override
+  Stream<List<SyncOperationModel>> watchFailedSyncOperations() {
+    return Stream.value(
+      syncOps.values.where((op) => op.status == 'failed').toList(),
+    );
+  }
+
+  @override
+  Stream<List<SyncOperationModel>> watchAllSyncOperations() {
+    return Stream.value(syncOps.values.toList());
+  }
 }

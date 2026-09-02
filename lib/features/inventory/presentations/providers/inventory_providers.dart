@@ -6,6 +6,7 @@ import 'package:collaborative_inventory/features/inventory/data/models/product_m
 import 'package:collaborative_inventory/features/inventory/data/models/stock_mutation_model.dart';
 import 'package:collaborative_inventory/features/inventory/data/models/sync_operation_model.dart';
 import 'package:collaborative_inventory/features/inventory/data/repositories/inventory_repository_impl.dart';
+import 'package:collaborative_inventory/features/inventory/domain/entities/mutation_with_status.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/product.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/stock_mutation.dart';
 import 'package:collaborative_inventory/features/inventory/domain/repositories/inventory_repository.dart';
@@ -63,6 +64,10 @@ final pendingProductIdsProvider = StreamProvider<Set<String>>(
   (ref) => ref.watch(inventoryRepositoryProvider).watchPendingProductIds(),
 );
 
+final failedProductIdsProvider = StreamProvider<Set<String>>(
+  (ref) => ref.watch(inventoryRepositoryProvider).watchFailedProductIds(),
+);
+
 final mutationHistoryProvider =
     StreamProvider.family<List<StockMutation>, String>(
       (ref, productId) => ref
@@ -71,5 +76,13 @@ final mutationHistoryProvider =
     );
 
 final updateStockUseCaseProvider = Provider<UpdateStockUseCase>(
-  (ref) => UpdateStockUseCase(repository: ref.read(inventoryRepositoryProvider)),
+  (ref) =>
+      UpdateStockUseCase(repository: ref.read(inventoryRepositoryProvider)),
 );
+
+final mutationHistoryWithStatusProvider =
+    StreamProvider.family<List<MutationWithStatus>, String>(
+      (ref, productId) => ref
+          .watch(inventoryRepositoryProvider)
+          .watchMutationHistoryWithStatus(productId),
+    );
