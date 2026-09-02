@@ -8,13 +8,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collaborative_inventory/features/auth/domain/entities/user_role.dart';
 
-class ProductListScreen extends ConsumerWidget {
+class ProductListScreen extends ConsumerStatefulWidget {
   const ProductListScreen({super.key});
+  @override
+  ConsumerState<ProductListScreen> createState() => _ProductListScreenState();
+}
+
+class _ProductListScreenState extends ConsumerState<ProductListScreen> {
+  final Set<String> _inFlight = {};
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final productsAsync = ref.watch(productsStreamProvider);
     final pendingIds = ref.watch(pendingProductIdsProvider).value ?? {};
+    final failedIds = ref.watch(failedProductIdsProvider).value ?? {};
     final authState = ref.watch(authNotifierProvider);
     final currentUser = authState.value;
 
@@ -55,6 +62,7 @@ class ProductListScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final product = products[index];
               final isPending = pendingIds.contains(product.id);
+              final isFailed = failedIds.contains(product.id);
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -81,7 +89,16 @@ class ProductListScreen extends ConsumerWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isPending)
+                      if (isFailed)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: Icon(
+                            Icons.error_outline,
+                            size: 18,
+                            color: Colors.red,
+                          ),
+                        )
+                      else if (isPending)
                         const Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: Icon(
@@ -93,23 +110,27 @@ class ProductListScreen extends ConsumerWidget {
                       if (canEdit) ...[
                         IconButton(
                           icon: const Icon(Icons.remove_circle_outline),
-                          onPressed: () => _updateStock(
-                            ref,
-                            product.id,
-                            product.quantity - 1,
-                            currentUser.email,
-                            currentUser.role,
-                          ),
+                          onPressed: _inFlight.contains(product.id)
+                              ? null
+                              : () => _updateStock(
+                                  ref,
+                                  product.id,
+                                  product.quantity - 1,
+                                  currentUser.email,
+                                  currentUser.role,
+                                ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.add_circle_outline),
-                          onPressed: () => _updateStock(
-                            ref,
-                            product.id,
-                            product.quantity + 1,
-                            currentUser.email,
-                            currentUser.role,
-                          ),
+                          onPressed: _inFlight.contains(product.id)
+                              ? null
+                              : () => _updateStock(
+                                  ref,
+                                  product.id,
+                                  product.quantity + 1,
+                                  currentUser.email,
+                                  currentUser.role,
+                                ),
                         ),
                       ],
                     ],
@@ -149,6 +170,8 @@ class ProductListScreen extends ConsumerWidget {
     String changedBy,
     UserRole role,
   ) async {
+    if (_inFlight.contains(productId)) return;
+    setState(() => _inFlight.add(productId));
     try {
       await ref
           .read(updateStockUseCaseProvider)
@@ -162,6 +185,8 @@ class ProductListScreen extends ConsumerWidget {
       await ref.read(syncQueueManagerProvider).triggerImmediateSyncIfOnline();
     } on PermissionDeniedException catch (e) {
       debugPrint('BLOCKED: ${e.message}');
+    } finally {
+      if (mounted) setState(() => _inFlight.remove(productId));
     }
   }
 }

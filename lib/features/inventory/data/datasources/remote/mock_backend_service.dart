@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:collaborative_inventory/features/inventory/domain/entities/stock_mutation.dart';
 
 class ConflictException implements Exception {
@@ -10,23 +12,24 @@ abstract class MockBackendService {
 }
 
 class MockBackendServiceImpl implements MockBackendService {
-  final Map<String, DateTime> _lastAcceptedTimestamp = {};
+  final Map<String, DateTime> _lastAcceptedTimestamps = {};
+  final Random _random = Random();
 
   @override
   Future<void> sendMutation(StockMutation mutation) async {
     await Future.delayed(const Duration(milliseconds: 400));
 
-    final lastTimestamp = _lastAcceptedTimestamp[mutation.productId];
+    final lastTimestamp = _lastAcceptedTimestamps[mutation.productId];
     if (lastTimestamp != null && mutation.timestamp.isBefore(lastTimestamp)) {
       throw ConflictException(
         'Mutation for ${mutation.productId} is older than the last accepted write.',
       );
     }
 
-    if(DateTime.now().millisecond%5==0){
+    if (_random.nextDouble() < 0.2) {
       throw Exception('Simulated network failure');
     }
 
-    _lastAcceptedTimestamp[mutation.productId]=mutation.timestamp;
+    _lastAcceptedTimestamps[mutation.productId] = mutation.timestamp;
   }
 }

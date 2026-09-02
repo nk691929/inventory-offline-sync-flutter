@@ -8,6 +8,7 @@ class SyncQueueManager {
   final InventoryRepository repository;
 
   StreamSubscription<bool>? _subscription;
+  Timer? _periodicTimer;
 
   SyncQueueManager({
     required this.connectivityService,
@@ -22,6 +23,10 @@ class SyncQueueManager {
         repository.syncPendingOperations();
       }
     });
+
+    _periodicTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      triggerImmediateSyncIfOnline();
+    });
   }
 
   Future<void> triggerImmediateSyncIfOnline() async {
@@ -33,5 +38,6 @@ class SyncQueueManager {
 
   void dispose() {
     _subscription?.cancel();
+    _periodicTimer?.cancel();
   }
 }

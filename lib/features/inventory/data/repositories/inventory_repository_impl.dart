@@ -3,10 +3,12 @@ import 'package:collaborative_inventory/features/inventory/data/datasources/remo
 import 'package:collaborative_inventory/features/inventory/data/models/product_model.dart';
 import 'package:collaborative_inventory/features/inventory/data/models/stock_mutation_model.dart';
 import 'package:collaborative_inventory/features/inventory/data/models/sync_operation_model.dart';
+import 'package:collaborative_inventory/features/inventory/domain/entities/mutation_with_status.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/product.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/stock_mutation.dart';
 import 'package:collaborative_inventory/features/inventory/domain/entities/sync_operation.dart';
 import 'package:collaborative_inventory/features/inventory/domain/repositories/inventory_repository.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:uuid/uuid.dart';
 
 class InventoryRepositoryImpl implements InventoryRepository {
@@ -46,12 +48,43 @@ class InventoryRepositoryImpl implements InventoryRepository {
 
   @override
   Stream<Set<String>> watchPendingProductIds() {
-    return localDataSource.watchPendingSyncOperations().map((models) {
-      return models
+    return _watchLatestStatusPerProduct().map(
+      (statusMap) => statusMap.entries
+          .where((e) => e.value == OperationStatus.pending)
+          .map((e) => e.key)
+          .toSet(),
+    );
+  }
+
+  @override
+  Stream<Set<String>> watchFailedProductIds() {
+    return _watchLatestStatusPerProduct().map(
+      (statusMap) => statusMap.entries
+          .where((e) => e.value == OperationStatus.failed)
+          .map((e) => e.key)
+          .toSet(),
+    );
+  }
+
+  Stream<Map<String, OperationStatus>> _watchLatestStatusPerProduct() {
+    return localDataSource.watchAllSyncOperations().map((models) {
+      final operations = models
           .map((m) => m.toEntity())
           .whereType<StockMutationOperation>()
-          .map((op) => op.mutation.productId)
-          .toSet();
+          .toList();
+
+      final latestPerProduct = <String, StockMutationOperation>{};
+      for (final op in operations) {
+        final productId = op.mutation.productId;
+        final existing = latestPerProduct[productId];
+        if (existing == null || op.createdAt.isAfter(existing.createdAt)) {
+          latestPerProduct[productId] = op;
+        }
+      }
+
+      return latestPerProduct.map(
+        (productId, op) => MapEntry(productId, op.status),
+      );
     });
   }
 
@@ -128,7 +161,12 @@ class InventoryRepositoryImpl implements InventoryRepository {
     try {
       final pendingModels = await localDataSource.getPendingOperations();
 
-      for (final model in pendingModels) {
+      final sortedModels = [...pendingModels]
+        ..sort(
+          (a, b) => a.toEntity().createdAt.compareTo(b.toEntity().createdAt),
+        );
+
+      for (final model in sortedModels) {
         final operation = model.toEntity();
         if (operation is! StockMutationOperation) continue;
 
@@ -167,7 +205,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
         }
       }
     } finally {
-      _isSyncing = false; 
+      _isSyncing = false;
     }
   }
 
@@ -188,5 +226,31 @@ class InventoryRepositoryImpl implements InventoryRepository {
       lastModified: DateTime.now(),
     );
     await localDataSource.saveProduct(rolledBack);
+  }
+
+  @override
+  Stream<List<MutationWithStatus>> watchMutationHistoryWithStatus(
+    String productId,
+  ) {
+    return Rx.combineLatest2(
+      localDataSource.watchMutationHistory(productId),
+      localDataSource.watchAllSyncOperations(),
+      (mutationModels, operationModels) {
+        final mutations = mutationModels.map((m) => m.toEntity()).toList();
+        final operations = operationModels
+            .map((o) => o.toEntity())
+            .whereType<StockMutationOperation>()
+            .toList();
+        return mutations.map((mutation) {
+          final matchingOps = operations
+              .where((op) => op.mutation.id == mutation.id)
+              .firstOrNull;
+          return MutationWithStatus(
+            mutation: mutation,
+            status: matchingOps!.status,
+          );
+        }).toList();
+      },
+    );
   }
 }

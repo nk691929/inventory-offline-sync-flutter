@@ -1,4 +1,5 @@
 // features/inventory/presentation/screens/audit_log_screen.dart
+import 'package:collaborative_inventory/features/inventory/domain/entities/sync_operation.dart';
 import 'package:collaborative_inventory/features/inventory/presentations/providers/inventory_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,28 +24,32 @@ class AuditLogScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final historyAsync = ref.watch(mutationHistoryProvider(productId));
+    final historyAsync = ref.watch(
+      mutationHistoryWithStatusProvider(productId),
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text('$productName — History')),
       body: historyAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Error: $err')),
-        data: (mutations) {
-          if (mutations.isEmpty) {
+        data: (items) {
+          if (items.isEmpty) {
             return const Center(child: Text('No changes yet.'));
           }
-          final sorted = [...mutations]
-            ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          final sorted = [...items]
+            ..sort(
+              (a, b) => b.mutation.timestamp.compareTo(a.mutation.timestamp),
+            );
 
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: sorted.length,
             itemBuilder: (context, index) {
-              final m = sorted[index];
+              final m = sorted[index].mutation;
               final delta = m.resultingQuantity - m.previousQuantity;
               final isIncrease = delta >= 0;
-
+              
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: ListTile(
@@ -82,29 +87,41 @@ class AuditLogScreen extends ConsumerWidget {
                   ),
                   subtitle: Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Row(
+                    child: Column(
                       children: [
-                        const Icon(
-                          Icons.person_outline,
-                          size: 14,
-                          color: Colors.grey,
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.person_outline,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              m.changedBy,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(m.changedBy, style: const TextStyle(fontSize: 13)),
-                        const SizedBox(width: 12),
-                        const Icon(
-                          Icons.schedule,
-                          size: 14,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatTimestamp(m.timestamp),
-                          style: const TextStyle(fontSize: 13),
+                        const SizedBox(width: 5),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.schedule,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatTimestamp(m.timestamp),
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
+                  trailing: statusChip(sorted[index].status),
                 ),
               );
             },
@@ -112,5 +129,27 @@ class AuditLogScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Widget statusChip(OperationStatus status) {
+    switch (status) {
+      case OperationStatus.synced:
+        return const Chip(
+          label: Text('Synced', style: TextStyle(fontSize: 11)),
+          backgroundColor: Color(0xFFDFF5E1),
+        );
+      case OperationStatus.pending:
+        return const Chip(
+          label: Text('Pending', style: TextStyle(fontSize: 11)),
+          backgroundColor: Color(0xFFFFF3D6),
+        );
+      case OperationStatus.failed:
+        return const Chip(
+          label: Text('Failed RB', style: TextStyle(fontSize: 11)),
+          backgroundColor: Color(0xFFFFE0E0),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }
