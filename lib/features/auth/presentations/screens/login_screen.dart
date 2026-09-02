@@ -14,6 +14,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _errorText;
+  bool _hasAttemptedLogin = false;
 
   @override
   void dispose() {
@@ -31,7 +32,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           context,
           MaterialPageRoute(builder: (_) => const ProductListScreen()),
         );
-      } else if (next is AsyncData && previous is AsyncLoading) {
+      } else if (_hasAttemptedLogin &&
+          next is AsyncData &&
+          previous is AsyncLoading) {
         setState(() {
           _errorText = 'Inavild email or password';
         });
@@ -116,7 +119,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _handleLogin() {
-    setState(() => _errorText = null);
+    setState(() {
+      _errorText = null;
+      _hasAttemptedLogin = true;
+    });
     ref
         .read(authNotifierProvider.notifier)
         .login(_emailController.text.trim(), _passwordController.text.trim());
