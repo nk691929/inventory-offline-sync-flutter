@@ -6,6 +6,26 @@ Built as a from-scratch architectural rebuild — see [AI Assistance](#ai-assist
 
 ![CI](https://github.com/nk691929/inventory-offline-sync-flutter/actions/workflows/ci.yml/badge.svg)
 
+## Demo
+
+**Role-based access control** — Manager (left) vs. Viewer (right), same screen, same data:
+
+<p float="left">
+  <img src="docs/screenshots/manager-view.png" width="45%" />
+  <img src="docs/screenshots/viewer-view.png" width="45%" />
+</p>
+
+**Offline queue in action** — the sync icon appears the moment a change is made offline, and clears automatically once the app reconnects:
+
+![Offline sync](docs/screenshots/offline-sync.png)
+
+**Audit log** — every attempted change is recorded, including ones that later failed and rolled back:
+
+![Audit log](docs/screenshots/audit-log.png)
+
+[Full demo recording](https://drive.google.com/file/d/1WtkYDr4I5L6NsUeQhbluQc7OW-6yMpMD/view?usp=drivesdk) — offline queue, retry, and role switching, ~2 minutes.
+
+
 ## Features
 
 - **Mock authentication** with three seeded roles (Admin, Manager, Viewer)
